@@ -3,6 +3,14 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# my spacifics
+*.pdf
+*.png
+*.jpg
+*.jpeg 
+
+
+
 # User-specific files
 *.rsuser
 *.suo

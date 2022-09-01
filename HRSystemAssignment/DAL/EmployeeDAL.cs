@@ -1,5 +1,6 @@
 ﻿using HRSystemAPI.Model;
 using System.Data.SqlClient;
+using System.IO;
 
 namespace HRSystemAPI.DAL;
 
@@ -12,18 +13,17 @@ public class EmployeeDAL
         ConnectionString = configuration.GetConnectionString("DefaultConnection");
         connection = new SqlConnection(ConnectionString);
     }
-    internal async Task<Status> AllEmployeesAsync()
+    internal async Task<List<Employee>> AllEmployeesAsync()
     {
-        Status st = new();
+        var Employees = new List<Employee>();
         try
         {
-            var Employees = new List<Employee>();
-            using(var cmd = connection.CreateCommand())
+            using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = "select * from employee";
                 await connection.OpenAsync();
                 var rd = await cmd.ExecuteReaderAsync();
-            
+
                 while (await rd.ReadAsync())
                 {
                     Employees.Add(
@@ -35,33 +35,22 @@ public class EmployeeDAL
                     );
                 }
             }
-            st.Success = true;
-            st.Employees = Employees;
         }
-        catch
-        {
-            st.Success = false;
-            st.Message = "An error acoured, refresh the page and try again";
-        }
-        finally
-        {
-            await connection.CloseAsync();
-        }
-        return st;
+        catch { throw new Exception(); }
+        finally { await connection.CloseAsync(); }
+        return Employees;
     }
-    internal async Task<Status> EmployeesByName(string query)
+    internal async Task<List<Employee>> EmployeesByName(string query)
     {
-
-        Status st = new();
+        var Employees = new List<Employee>();
         try
         {
-            var Employees = new List<Employee>();
-            using(var cmd = connection.CreateCommand())
+            using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = "select * from employee where name like '%"+query+"%'";
+                cmd.CommandText = "select * from employee where name like '%" + query + "%'";
                 await connection.OpenAsync();
                 var rd = await cmd.ExecuteReaderAsync();
-            
+
                 while (await rd.ReadAsync())
                 {
                     Employees.Add(
@@ -73,33 +62,23 @@ public class EmployeeDAL
                     );
                 }
             }
-            st.Success = true;
-            st.Employees = Employees;
         }
-        catch
-        {
-            st.Success = false;
-            st.Message = "An error acoured, refresh the page and try again";
-        }
-        finally
-        {
-            await connection.CloseAsync();
-        }
-        return st;
+        catch { throw new Exception(); }
+        finally { await connection.CloseAsync(); }
+        return Employees;
     }
 
-    internal async Task<Status> GetEmployeeFiles(int Id)
+    internal async Task<List<EmployeeFile>> GetEmployeeFiles(int Id)
     {
-        var st = new Status();
+        var Files = new List<EmployeeFile>();
         try
         {
-            var Files = new List<EmployeeFile>();
-            using(var cmd = connection.CreateCommand())
+            using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = "select * from employeefile where employee_id = " + Id;
                 await connection.OpenAsync();
                 var rd = await cmd.ExecuteReaderAsync();
-            
+
                 while (await rd.ReadAsync())
                 {
                     Files.Add(
@@ -112,36 +91,26 @@ public class EmployeeDAL
                     );
                 }
             }
-            st.Success = true;
-            st.Files = Files;
-
         }
-        catch
-        {
-            st.Success = false;
-            st.Message = "An error accoured, refresh the page and try again";
-
-        }
+        catch { throw new Exception(); }
         finally { await connection.CloseAsync(); }
-        return st;
+        return Files;
     }
 
     internal async Task AddFile(int id, string fileName, long fileSize)
     {
         try
         {
-            using(var cmd = connection.CreateCommand())
+            using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = "insert into employeefile (filename,employee_id,filesize) values " +
-                    "('" + fileName+"',"+id+","+fileSize+")";
+                    "('" + fileName + "'," + id + "," + fileSize + ");";
                 await connection.OpenAsync();
                 await cmd.ExecuteNonQueryAsync();
             }
         }
         catch { throw new Exception(); }
-        finally { 
-            await connection.CloseAsync();
-            connection.Dispose();
+        finally { await connection.CloseAsync();
         }
     }
 
@@ -150,32 +119,163 @@ public class EmployeeDAL
         string filename = "";
         try
         {
-            using(var cmd = connection.CreateCommand())
+            using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = "select filename from employeefile where id = " + id;
                 await connection.OpenAsync();
                 filename = (await cmd.ExecuteScalarAsync()) as string;
             }
         }
-        catch { }
+        catch { throw new Exception(); }
         finally { await connection.CloseAsync(); }
         return filename;
     }
 
     internal async Task<int> DeleteFile(int id)
     {
-        int res=0;
+        int res = 0;
         try
         {
-            using(var cmd = connection.CreateCommand())
+            using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = "delete from employeefile where id = " + id;
                 await connection.OpenAsync();
                 res = await cmd.ExecuteNonQueryAsync();
             }
         }
-        catch { }
+        catch { throw new Exception(); }
         finally { await connection.CloseAsync(); }
         return res;
+    }
+    internal async Task<int> AddEmployee(Employee emp)
+    {
+        int res;
+        try
+        {
+            using (var cmd = connection.CreateCommand())
+            {
+                cmd.CommandText = "insert into employee (name,dateofbirth,address,department_id) values " +
+                    "('" + emp.Name.Trim() + "',(CAST('" + emp.DateOfBirth.ToString("yyyy-MM-dd") + "' AS Date)), '"
+                    + emp.Address.Trim() + "'," + emp.DepartmentId + " ) SELECT CAST(scope_identity() AS int)";
+                await connection.OpenAsync();
+                res = (int) await cmd.ExecuteScalarAsync();
+            }
+        }
+        catch { throw new Exception(); }
+        finally { await connection.CloseAsync(); }
+        return res;
+
+    } 
+    internal async Task DeleteEmployee(int id)
+    {
+        var Files = await GetEmployeeFiles(id);
+        try
+        {
+            using (var cmd = connection.CreateCommand())
+            {
+
+                cmd.CommandText = "select name from employee where id = " + id;
+                await connection.OpenAsync();
+
+                var x = (await cmd.ExecuteScalarAsync()) as string;
+                if (string.IsNullOrEmpty(x)) throw new Exception();
+                cmd.CommandText = "delete from employeefile where employee_id = " + id+";" +
+                    "delete from employee where id = "+id;
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            // cleaning files from desk
+            // in case we dont really wish to delete records or files 
+            // its enough to add Is_Deleted column in our table and set it true
+            foreach (var file in Files)
+                File.Delete(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Files", file.FileName));
+            
+        }
+        catch { throw new Exception(); }
+        finally { await connection.CloseAsync(); }
+        
+
+    }
+
+    internal async Task UpdateEmployee(Employee employee)
+    {
+        try
+        {
+            using (var cmd = connection.CreateCommand())
+            {
+
+                cmd.CommandText = "update employee set name = '" + employee.Name.Trim() + "' , address = '" +
+                    employee.Address.Trim() + "' , dateofbirth = (CAST('" + employee.DateOfBirth.ToString("yyyy-MM-dd")
+                    + "' AS Date)), department_id = " + employee.DepartmentId + " where id = " + employee.Id;
+                await connection.OpenAsync();
+                await cmd.ExecuteNonQueryAsync();
+            }
+        }
+        catch { throw new Exception(); }
+        finally { await connection.CloseAsync(); }
+    }
+
+    internal async Task<List<Department>> GetDepartments()
+    {
+
+        var Departments = new List<Department>();
+        try
+        {
+            using (var cmd = connection.CreateCommand())
+            {
+                cmd.CommandText = "select * from Department";
+                await connection.OpenAsync();
+                var rd = await cmd.ExecuteReaderAsync();
+
+                while (await rd.ReadAsync())
+                {
+                    Departments.Add(
+                        new Department
+                        {
+                            Id = Convert.ToInt32(rd["Id"]),
+                            Name = Convert.ToString(rd["Name"]),
+                        }
+                    );
+                }
+            }
+        }
+        catch { throw new Exception(); }
+        finally { await connection.CloseAsync(); }
+        return Departments;
+    }
+
+    internal async Task AddDepartment(string name)
+    {
+        try
+        {
+            using (var cmd = connection.CreateCommand())
+            {
+                cmd.CommandText = "select name from department where name = " + name;
+                await connection.OpenAsync();
+                var x = (await cmd.ExecuteScalarAsync()) as string;
+                if (!string.IsNullOrEmpty(x)) throw new Exception();
+                cmd.CommandText = "insert into Department (name) values ('" + name + "')";
+               
+                await cmd.ExecuteScalarAsync();
+            }
+        }
+        catch { throw new Exception(); }
+        finally { await connection.CloseAsync(); }
+    }
+    internal async Task DeleteDepartment(int id)
+    {
+        int res;
+        try
+        {
+            using (var cmd = connection.CreateCommand())
+            {
+                cmd.CommandText = "delete from department where id =" + id;
+                await connection.OpenAsync();
+                res = await cmd.ExecuteNonQueryAsync();
+                if(res < 1) { throw new Exception(); }
+            }
+        }
+        catch { throw new Exception(); }
+        finally { await connection.CloseAsync(); }
     }
 }
