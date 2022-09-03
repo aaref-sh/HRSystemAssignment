@@ -1,0 +1,54 @@
+﻿@page "/Departments"
+
+<PageTitle>Departments</PageTitle>
+
+<Note @ref="note"></Note>
+
+<div class="mb-3 row col-12 col-md-10 col-lg-6">
+    <label for="AddDepartment" class="col-4 col-sm-3 col-form-label">Add new</label>
+    <div class="col">
+        <input type="text" @bind="depname" class="form-control" id="AddDepartment" placeholder="Department Name">
+    </div>
+    <div class="col-2">
+        <button @onclick=@( async ()=> await AddDepartment()) type="submit" class="btn btn-primary mb-3 @(adding?"disabled":"")">
+            @if(adding){
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            }else{
+                <span>Add</span>
+            }
+        </button>
+    </div>
+</div>
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Department Name</th>
+                <th scope="col"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < departments.Count; i++)
+            {
+                int id = departments[i].Id;
+                <tr>
+                    <th scope="row">@(i + 1)</th>
+                    <td>@departments[i].Name</td>
+                    <td>
+                        <button @onclick=@( async ()=> await DeleteDepartment(id))
+                            class="btn btn-danger">
+                            delete
+                        </button>
+                    </td>
+                </tr>
+            }
+            @if (!departments.Any())
+            {
+                <tr>
+                    <th scope="row"> @(message ?? "getting departments from server")</th>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

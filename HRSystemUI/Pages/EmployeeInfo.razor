@@ -1,0 +1,78 @@
+﻿@page "/employee/{Id}"
+
+<PageTitle>Information of @emp?.Name</PageTitle>
+
+<Note @ref="note"></Note>
+
+@if(emp==null){
+    <div class="d-flex align-items-center m-3">
+        <strong>Loading...</strong>
+        <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+    </div>
+}
+else{
+    <form @onsubmit=@(async ()=> await UpdateEmployee()) class="row">
+        <div class="col-lg-6">
+            <div class="input-group mb-3">
+                <span class="input-group-text">Full Name</span>
+                <input @bind="emp.Name" type="text" placeholder="Full Name" class="form-control">
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="input-group mb-3">
+                <span class="input-group-text">Address</span>
+                <input @bind="emp.Address" type="text" placeholder="Address" class="form-control">
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="input-group mb-3">
+                <span class="input-group-text">Department</span>
+                <select @bind="emp.DepartmentId" class="form-select">
+                    @foreach (var dep in departments)
+                    {
+                        <option value="@dep.Id">@dep.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="input-group mb-3">
+                <span class="input-group-text">Address</span>
+                <input @bind-value="emp.DateOfBirth" type="date" class="form-control">
+
+            </div>
+        </div>
+
+        <div class="mb-3 col-lg-6">
+            <InputFile OnChange="FilesLoad" accept="image/*" class="form-control" multiple />
+        </div>
+        <div class="col-2 mb-3 col-lg-6">
+            <button type="submit" class="btn btn-primary mb-3 @(uploading?"disabled":"") ">
+                @if(uploading){
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                }
+                Update
+            </button>
+        </div>
+    </form>
+}
+<div class="row">
+@foreach (var file in files)
+{
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="card" style="width:100%">
+                <a href="@(url+"GetFileById?id="+file.Id)" target="_blank">
+                    <img src="@(url+"GetFileById?id="+file.Id)" class="card-img-top">
+                </a>
+          <div class="card-body">
+            <button @onclick=@(async ()=>await DeleteFile(file)) class="btn btn-danger btn-sm">Delete</button>
+          </div>
+        </div>
+    </div>
+}
+</div>
+
+
+@code {
+
+}

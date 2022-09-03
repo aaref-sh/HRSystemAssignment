@@ -2,8 +2,97 @@
 
 <PageTitle>Index</PageTitle>
 
-<h1>Hello, world!</h1>
+<Note @ref="note" ></Note>
 
-Welcome to your new app.
+<div class="card mb-3">
+  <div class="card-header">
+    Add an employee
+  </div>
+    <form @onsubmit=@(async ()=> await AddEmployee()) class="card-body row">
+        <div class="col-md-6 mb-3">
+            <input @bind=EmployeeToAdd.Name type="text" class="form-control" placeholder="Full Name">
+        </div>
+        <div class="col-md-6 mb-3">
+            <input @bind=EmployeeToAdd.Address type="text" class="form-control" placeholder="Address">
+        </div>
+        <div class="col-md-6 mb-3">
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+            <select @bind=EmployeeToAdd.DepartmentId class="form-select">
+                <option>-- select please --</option>
+                @foreach(var dep in departments){
+                    <option value="@dep.Id">@dep.Name</option>
+                }
+            </select>
+
+        </div>
+        <div class="col-md-6 mb-3">
+            <input type="date" @bind-value="EmployeeToAdd.DateOfBirth" class="form-control" >
+
+        </div>
+        <div class="col-md-6 mb-3">
+            <InputFile accept="image/*" OnChange="FilesLoad" class="form-control" multiple />
+        </div>
+        <div class="col-2">
+            <button type="submit" class="btn btn-primary mb-3 @(uploading?"disabled":"")">
+                @if(uploading){
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                }
+                Add
+            </button>
+        </div>
+
+  </form>
+</div>
+
+<div class="input-group mb-3">
+    <span class="input-group-text"></span>
+    <input @bind="EmployeeToSearch.Name" type="text" placeholder="Full Name" class="form-control">
+    <input @bind="EmployeeToSearch.Address" type="text" placeholder="Address" class="form-control">
+    <select @bind=EmployeeToSearch.DepartmentId class="form-select">
+        <option value="0">-- All --</option>
+        @foreach (var dep in departments)
+        {
+            <option value="@dep.Id">@dep.Name</option>
+        }
+    </select>
+    <button @onclick=@(async ()=> await SearchEmployees())  class="form-control btn btn-outline-primary ">Search</button>
+
+</div>
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Name</th>
+                <th scope="col">Address</th>
+                <th scope="col">Department</th>
+                <th scope="col">Date of Birth</th>
+                <th scope="col"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < employees.Count; i++)
+            {
+                var emp = employees[i];
+                <tr>
+                    <th scope="row">  @(i + 1)</th>
+                    <td>@employees[i].Name</td>
+                    <td>@employees[i].Address</td>
+                    <td>@departments.FirstOrDefault(x=>x.Id == employees[i].DepartmentId)?.Name</td>
+                    <td>@employees[i].DateOfBirth.ToShortDateString()</td>
+                    <td>
+                        <a href="employee/@emp.Id" class="btn btn-secondary btn-sm"><span class="oi oi-external-link"></span> </a>
+                        <button @onclick=@( async ()=> await DeleteEmployee(emp))
+                            class="btn btn-danger btn-sm"> delete </button>
+                    </td>
+                </tr>
+            }
+            @if (!employees.Any())
+            {
+                <tr>
+                    <th scope="row"> @(message ?? "getting employees from server")</th>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

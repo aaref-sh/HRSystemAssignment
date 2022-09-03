@@ -1,4 +1,4 @@
-﻿namespace HRSystemAPI.Model;
+﻿namespace HRSystemUI.Model;
 
 public class EmployeeFile
 {

@@ -1,0 +1,19 @@
+﻿@using HRSystemUI.Model
+@if(msg!=null){
+    <div class="alert alert-@(msg.Success?"success":"warning")" role="alert">
+        @msg.Message
+    </div>
+}
+
+@code {
+    public Status? msg { get; set; }
+
+    public async Task ShowNote(Status st){
+        this.msg = st;
+        this.StateHasChanged();
+        await Task.Delay(3500);
+        this.msg = null;
+        this.StateHasChanged();
+
+    }
+}

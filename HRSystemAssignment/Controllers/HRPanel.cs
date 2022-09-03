@@ -11,27 +11,23 @@ namespace HRSystemAPI.Controllers;
 public class HRPanel : ControllerBase
 {
     EmployeeDAL employeeDAL;
-    public HRPanel(IConfiguration configuration)
+    public HRPanel(IConfiguration configuration,IWebHostEnvironment inv)
     {
         employeeDAL = new EmployeeDAL(configuration);
     }
     
     
     [HttpGet("GetEmployees")]
-    public async Task<IActionResult> GetEmployees(string? query)
+    public async Task<IActionResult> GetEmployees()
     {
         Status st = new();
         try
         {
-            if (query == null)
-            {
-                st.Employees = await employeeDAL.AllEmployeesAsync();
-                st.Success = true;
-                return Ok(st);
-            }
-            st.Employees = await employeeDAL.EmployeesByName(query);
+            
+            st.Employees = await employeeDAL.AllEmployeesAsync();
             st.Success = true;
             return Ok(st);
+            
         }
         catch
         {
@@ -41,7 +37,28 @@ public class HRPanel : ControllerBase
         }
     }
     
+
+    [HttpPost("SearchEmployees")]
+    public async Task<IActionResult> SearchEmployees(Employee emp)
+    {
+        Status st = new();
+        try
+        {
+            
+            st.Employees = await employeeDAL.SearchEmployeesAsync(emp);
+            st.Success = true;
+            return Ok(st);
+            
+        }
+        catch
+        {
+            st.Success = false;
+            st.Message = "An error occurred, refresh the page and try again";
+            return StatusCode(500,st);
+        }
+    }
     
+
     [HttpGet("GetFiles")]
     public async Task<IActionResult> GetFiles(int id)
     {
@@ -61,8 +78,8 @@ public class HRPanel : ControllerBase
     }
 
     
-    [HttpPost("AddFile")]
-    public async Task<IActionResult> AddFile(List<IFormFile> files, int id)
+    [HttpPost("AddFiles")]
+    public async Task<IActionResult> AddFiles(List<IFormFile> files, int id)
     {
         Status st = new();
         try
@@ -76,7 +93,7 @@ public class HRPanel : ControllerBase
                     string SavePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Files", FileName);
                     using (var stream = new FileStream(SavePath, FileMode.Create))
                     {
-                        formFile.CopyTo(stream);
+                        await formFile.CopyToAsync(stream);
                         var FileSize = formFile.Length;
                         await employeeDAL.AddFile(id, FileName, FileSize);
                     }
@@ -96,29 +113,26 @@ public class HRPanel : ControllerBase
     
     
     [HttpPost("DeleteFile")]
-    public async Task<IActionResult> DeleteFile(int id)
+    public async Task<IActionResult> DeleteFile(EmployeeFile file)
     {
         Status st = new();
         try
         {
-
-            string FileName = await employeeDAL.GetFileName(id);
+            string FileName = await employeeDAL.GetFileName(file.Id);
             string FilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Files", FileName);
             
             System.IO.File.Delete(FilePath);
-            var deleted = await employeeDAL.DeleteFile(id);
+            var deleted = await employeeDAL.DeleteFile(file.Id);
             st.Success = true;
             st.Message = "Done";
+            return Ok(st);
         }
         catch
         {
             st.Success = false;
             st.Message = "No such file";
             return StatusCode(500, st);
-
         }
-        return Ok(st);
-
     }
     
     
@@ -142,19 +156,42 @@ public class HRPanel : ControllerBase
     }
 
 
-    [HttpPost("DeleteEmployee")]
-    public async Task<IActionResult> DeleteEmployee(int id)
+    [HttpGet("GetEmployeeById")]
+    public async Task<IActionResult> GetEmployeeById(int Id)
     {
         var st = new Status();
         try
         {
-            await employeeDAL.DeleteEmployee(id);
+            Employee emp = await employeeDAL.GetEmployeeById(Id);
+            List<Employee> employees = new List<Employee>();
+            employees.Add(emp);
+            st.Success = true;
+            st.Employees = employees;
+            return Ok(st);
+        }
+        catch
+        {
+            st.Success = false;
+            st.Message = "An error occurred, refresh the page and try again";
+            return StatusCode(500, st);
+        }
+
+    }
+
+
+    [HttpPost("DeleteEmployee")]
+    public async Task<IActionResult> DeleteEmployee(Employee emp)
+    {
+        var st = new Status();
+        try
+        {
+            await employeeDAL.DeleteEmployee(emp.Id);
             st.Success = true;
             st.Message = "Done";
             return Ok(st);
 
         }
-        catch (Exception e) 
+        catch 
         {
             st.Success = false;
             st.Message = "An error occurred, Maybe no such Employee";
@@ -200,7 +237,7 @@ public class HRPanel : ControllerBase
     }
 
 
-    [HttpPost("GetDepartments")]
+    [HttpGet("GetDepartments")]
     public async Task<IActionResult> GetDepartments()
     {
         var st = new Status();
@@ -220,13 +257,14 @@ public class HRPanel : ControllerBase
 
 
     [HttpPost("AddDepartment")]
-    public async Task<IActionResult> AddDepartment(string name)
+    public async Task<IActionResult> AddDepartment(Department dep)
     {
         var st = new Status();
         try
         {
-            await employeeDAL.AddDepartment(name.Trim());
+            await employeeDAL.AddDepartment(dep.Name.Trim());
             st.Success = true;
+            st.Message = "Done";
             return Ok(st);
         }
         catch
@@ -239,13 +277,14 @@ public class HRPanel : ControllerBase
 
 
     [HttpPost("DeleteDepartment")]
-    public async Task<IActionResult> DeleteDepartment(int id)
+    public async Task<IActionResult> DeleteDepartment(Department dep)
     {
         var st = new Status();
         try
         {
-            await employeeDAL.DeleteDepartment(id);
+            await employeeDAL.DeleteDepartment(dep.Id);
             st.Success = true;
+            st.Message = "Done";
             return Ok(st);
         }
         catch
@@ -255,6 +294,7 @@ public class HRPanel : ControllerBase
             return StatusCode(500, st);
         }
     }
+
 
     private string GetType(string fileName)
     {

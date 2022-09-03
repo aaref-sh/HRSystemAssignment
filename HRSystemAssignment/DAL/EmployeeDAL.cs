@@ -31,6 +31,9 @@ public class EmployeeDAL
                         {
                             Id = Convert.ToInt32(rd["Id"]),
                             Name = Convert.ToString(rd["Name"]),
+                            Address = Convert.ToString(rd["Address"]),
+                            DateOfBirth = Convert.ToDateTime(rd["Dateofbirth"]),
+                            DepartmentId = Convert.ToInt32(rd["department_id"]),
                         }
                     );
                 }
@@ -40,34 +43,6 @@ public class EmployeeDAL
         finally { await connection.CloseAsync(); }
         return Employees;
     }
-    internal async Task<List<Employee>> EmployeesByName(string query)
-    {
-        var Employees = new List<Employee>();
-        try
-        {
-            using (var cmd = connection.CreateCommand())
-            {
-                cmd.CommandText = "select * from employee where name like '%" + query + "%'";
-                await connection.OpenAsync();
-                var rd = await cmd.ExecuteReaderAsync();
-
-                while (await rd.ReadAsync())
-                {
-                    Employees.Add(
-                        new Employee
-                        {
-                            Id = Convert.ToInt32(rd["Id"]),
-                            Name = Convert.ToString(rd["Name"]),
-                        }
-                    );
-                }
-            }
-        }
-        catch { throw new Exception(); }
-        finally { await connection.CloseAsync(); }
-        return Employees;
-    }
-
     internal async Task<List<EmployeeFile>> GetEmployeeFiles(int Id)
     {
         var Files = new List<EmployeeFile>();
@@ -250,7 +225,7 @@ public class EmployeeDAL
         {
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = "select name from department where name = " + name;
+                cmd.CommandText = "select name from department where name = '" + name + "'";
                 await connection.OpenAsync();
                 var x = (await cmd.ExecuteScalarAsync()) as string;
                 if (!string.IsNullOrEmpty(x)) throw new Exception();
@@ -269,7 +244,24 @@ public class EmployeeDAL
         {
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = "delete from department where id =" + id;
+                List<int> ids = new();
+                cmd.CommandText = "select * from employee where department_id ="+id;
+                await connection.OpenAsync();
+                var rd = await cmd.ExecuteReaderAsync();
+
+                while (await rd.ReadAsync())
+                {
+                    try
+                    {
+                        ids.Add(Convert.ToInt32(rd["Id"]));
+                    }
+                    catch { }
+                }
+                await connection.CloseAsync();
+                foreach(var i in ids) 
+                        await DeleteEmployee(i);
+
+                cmd.CommandText = "delete from department where id = " + id;
                 await connection.OpenAsync();
                 res = await cmd.ExecuteNonQueryAsync();
                 if(res < 1) { throw new Exception(); }
@@ -277,5 +269,69 @@ public class EmployeeDAL
         }
         catch { throw new Exception(); }
         finally { await connection.CloseAsync(); }
+    }
+
+    internal async Task<Employee> GetEmployeeById(int id)
+    {
+        Employee employee = new();
+        try
+        {
+            using (var cmd = connection.CreateCommand())
+            {
+                cmd.CommandText = "select * from employee where id = "+id;
+                await connection.OpenAsync();
+                var rd = await cmd.ExecuteReaderAsync();
+
+                if(await rd.ReadAsync())
+                {
+                    employee = new Employee
+                    {
+                        Id = Convert.ToInt32(rd["Id"]),
+                        Name = Convert.ToString(rd["Name"]),
+                        Address = Convert.ToString(rd["Address"]),
+                        DateOfBirth = Convert.ToDateTime(rd["Dateofbirth"]),
+                        DepartmentId = Convert.ToInt32(rd["department_id"]),
+                    };
+                }
+            }
+        }
+        catch { throw new Exception(); }
+        finally { await connection.CloseAsync(); }
+        return employee;
+    }
+
+    internal async Task<List<Employee>?> SearchEmployeesAsync(Employee emp)
+    {
+
+        var Employees = new List<Employee>();
+        try
+        {
+            using (var cmd = connection.CreateCommand())
+            {
+                string text = "select * from employee where id>0 and name like '%" + emp.Name?.Trim() + "%' and " +
+                    "address like '%" + emp.Address?.Trim() +"%' ";
+                if (emp.DepartmentId != 0) text += " and department_id = " + emp.DepartmentId;
+                cmd.CommandText = text;
+                await connection.OpenAsync();
+                var rd = await cmd.ExecuteReaderAsync();
+
+                while (await rd.ReadAsync())
+                {
+                    Employees.Add(
+                        new Employee
+                        {
+                            Id = Convert.ToInt32(rd["Id"]),
+                            Name = Convert.ToString(rd["Name"]),
+                            Address = Convert.ToString(rd["Address"]),
+                            DateOfBirth = Convert.ToDateTime(rd["Dateofbirth"]),
+                            DepartmentId = Convert.ToInt32(rd["department_id"]),
+                        }
+                    );
+                }
+            }
+        }
+        catch { throw new Exception(); }
+        finally { await connection.CloseAsync(); }
+        return Employees;
     }
 }
